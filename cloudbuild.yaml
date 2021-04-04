@@ -1,0 +1,50 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: [ 'build', '--build-arg', 'ENV=production', '-t', 'gcr.io/$PROJECT_ID/node-chat-client:$SHORT_SHA', '.' ]
+- name: 'gcr.io/cloud-builders/docker'
+  args: [ 'push', 'gcr.io/$PROJECT_ID/node-chat-client:$SHORT_SHA' ]
+- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: bash
+  args:
+    - '-c'
+    - |
+      gcloud secrets versions access --secret=privateKey latest > /secrets/privateKey; \
+      echo "export appId=$(gcloud secrets versions access --secret=appId latest)" > /secrets/firebase; \
+      echo "export apiKey=$(gcloud secrets versions access --secret=apiKey latest)" >> /secrets/firebase; \
+      echo "export messagingSenderId=$(gcloud secrets versions access --secret=messagingSenderId latest)" >> /secrets/firebase; \
+      echo "export measurementId=$(gcloud secrets versions access --secret=measurementId latest)" >> /secrets/firebase; \
+      echo "export clientEmail=$(gcloud secrets versions access --secret=clientEmail latest)" >> /secrets/firebase; \
+      echo "export projectId=$(gcloud secrets versions access --secret=projectId latest)" >> /secrets/firebase; \
+      echo "export authDomain=$(gcloud secrets versions access --secret=authDomain latest)" >> /secrets/firebase; \
+      echo "export storageBucket=$(gcloud secrets versions access --secret=storageBucket latest)" >> /secrets/firebase; \
+      echo "export databaseURL=$(gcloud secrets versions access --secret=databaseURL latest)" >> /secrets/firebase
+  volumes:
+  - name: 'secrets'
+    path: '/secrets'
+- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: 'bash'
+  args:
+    - '-c'
+    - |
+      source /secrets/firebase; \
+      gcloud beta run deploy node-chat-client \
+      --allow-unauthenticated \
+      --image gcr.io/$PROJECT_ID/node-chat-client:$SHORT_SHA \
+      --region us-central1 \
+      --platform managed \
+      --port 3000 \
+      --set-env-vars appId=$appId \
+      --set-env-vars apiKey=$apiKey \
+      --set-env-vars messagingSenderId=$messagingSenderId \
+      --set-env-vars measurementId=$measurementId \
+      --set-env-vars privateKey="$(cat /secrets/privateKey)" \
+      --set-env-vars clientEmail=$clientEmail \
+      --set-env-vars projectId=$projectId \
+      --set-env-vars authDomain=$authDomain \
+      --set-env-vars storageBucket=$storageBucket \
+      --set-env-vars databaseURL=$databaseURL
+  volumes:
+  - name: 'secrets'
+    path: '/secrets'
+images:
+- 'gcr.io/$PROJECT_ID/node-chat-client'
