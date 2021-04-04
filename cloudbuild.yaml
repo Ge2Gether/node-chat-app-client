@@ -32,7 +32,6 @@ steps:
       --image gcr.io/$PROJECT_ID/node-chat-client:$SHORT_SHA \
       --region us-central1 \
       --platform managed \
-      --port 3000 \
       --set-env-vars appId=$appId \
       --set-env-vars apiKey=$apiKey \
       --set-env-vars messagingSenderId=$messagingSenderId \
