@@ -1,17 +1,15 @@
-FROM node:12
+FROM nginx:alpine
 
-ENV PORT=8080
+# Install npm and node
+RUN apk add --update npm
 
-# Create app directory
-WORKDIR /usr/src/app
+# Add bash
+RUN apk add --no-cache bash
 
-# Install app dependencies
-# A wildcard is used to ensure both package.json AND package-lock.json are copied
-# where available (npm@5+)
-COPY package*.json ./
+WORKDIR /app
 
-# If you are building your code for production
-# RUN npm ci --only=production
+COPY package.json ./
+
 ENV APP_ENV=development
 RUN if [ $APP_ENV != "production" ]; then \
         npm install; \
@@ -19,9 +17,11 @@ RUN if [ $APP_ENV != "production" ]; then \
         npm ci --only=production; \
     fi
 
-# Bundle app source
 COPY . .
 
-RUN npm run build
+# # Make our shell script executable
+RUN chmod +x start.sh
 
-CMD [ "npm", "run", "start" ]
+COPY ./nginx.conf /etc/nginx/conf.d/default.conf
+
+CMD ["/bin/bash", "-c", "/app/start.sh && nginx -g 'daemon off;'"]
